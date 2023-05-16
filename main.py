@@ -30,7 +30,7 @@ class Basic_Compiler:
         scroll_y.config(command=self.Output_Run.yview)
         self.Output_Run.pack(fill=BOTH, expand=1)
         
-        self.clear = False
+        self.Empty = False
         self.detect = False
         self.Qct=0
         
@@ -53,7 +53,9 @@ class Basic_Compiler:
         self.symbols = ["(", ")", "{", "}",",",";"]
         self.operators = ["+", "-","/","%", "*","&&","||","<",">","=","!"]
         self.datatype = ["int", "float", "string", "double", "bool", "char"]
-        self.functions = ["for", "while", "if", "do", "return", "break", "continue", "end"]
+        self.res_words = ["for", "while", "if", "do", "return", "break", "continue", "end", "switch", "default", "case"]
+        self.spliter = [";","}"]
+        
         
     
     def Filter_Breaks(self,Input):
@@ -66,103 +68,139 @@ class Basic_Compiler:
             self.Output_Run.insert(END, f"\n")
             self.Output_Run.insert(END, f"\n No Input")
         else:
-            if not self.clear:
+            if not self.Empty:
                 self.Output_Run.delete("1.0", END)
                 self.Output_Run.insert(END, f"\t \t Input Detected...")
                 self.Output_Run.insert(END, f"\n =====================================================================")
-                self.clear = True 
-            self.Get_Variables()  
+                self.Empty = True 
+            self.Output_Run.insert(END, f"\n")
+            self.Get_Declarations()  
             
     
-    def Get_Variables(self):
+    def Get_Declarations(self):
+        self.Declared_Vars = {}
+        self.BadDec = False
+        symbol = ""
         input_lines = self.Input.split(";")
         for line in input_lines:
             line = line.strip()
             if line:
                 tokens = line.split()
-                if len(tokens) >= 3 and tokens[0] in self.datatype:
-                    var = tokens[1]
-                    operator = tokens[2]
-                    value = " ".join(tokens[3:])
-                    symbol = ";"
-                    print(f"Data Type: {tokens[0]}, Variable: {var}, Operator: {operator}, Value: {value}, Symbol: {symbol}")
-                    self.Output_Run.insert(END, f"\n Data Type: {tokens[0]}, Variable: {var}, Operator: {operator}, Value: {value}, Symbol: {symbol}")
-        self.Parser() 
-                
-    def Parser(self):
-        input_lines = self.Input.split(";")
-        for line in input_lines:
-            line = line.strip()
-            if line:
-                tokens = line.split()
-                if len(tokens) >= 3 and tokens[0] in self.datatype:
-                    var = tokens[1]
-                    operator = tokens[2]
-                    value = " ".join(tokens[3:])
-                    symbol = ";"
-                    # print(f"Data Type: {tokens[0]}, Variable: {var}, Operator: {operator}, Value: {value}, Symbol: {symbol}")
-                elif len(tokens) >= 3 and tokens[0] in self.functions:
-                    if tokens[0] == "for":
-                        if len(tokens) == 9 and tokens[2] == ";" and tokens[4] == ";" and tokens[6] == ")":
-                            init_statement = " ".join(tokens[2:4])
-                            condition = " ".join(tokens[4:6])
-                            final_expression = " ".join(tokens[6:8])
-                            print(f"For loop: Init Statement: {init_statement}, Condition: {condition}, Final Expression: {final_expression}")
+                try:
+                    if len(tokens) >= 3 and tokens[0] in self.datatype:
+                        self.DecPos = 0
+                        var = tokens[1]
+                        matchVar = re.match(r'^(?![0-9]).*',var)
+                        if not matchVar or var.isdigit():
+                            print(f"\nError: Incorrect Name: '{var}'")
+                            self.Output_Run.insert(END, f"\nError: Incorrect Variable Name: '{var}'")
+                            self.BadDec = True
+
+                        operator = tokens[2]
+                        if operator != "=":
+                            print(f"\nError: Incorrect operator: '{operator}'")
+                            self.Output_Run.insert(END, f"\nError: Incorrect operator: '{operator}'")
+                            self.BadDec = True
+                            
+                        value = tokens[3]
+                                                
+                        if tokens[0] == 'bool':
+                                if value != "true" and value != "false":
+                                    print(f"\nError: Incorrect bool value: '{value}'")
+                                    self.Output_Run.insert(END, f"\nError: Incorrect bool value: '{value}'")
+                                    self.BadDec = True
+                                
+                        if tokens[0] == 'string':
+                            string = re.match(r"[\"'](?P<value>[\w\s]+)[\"']", value)
+                            if not string:
+                                print(f"\nError: Incorrect string value: '{value}'")
+                                self.Output_Run.insert(END, f"\nError: Incorrect string value: '{value}'")
+                                self.BadDec = True
+                            else:
+                                value = string.group('value')
+                        
+                        if tokens[0] == 'char':
+                            char = re.match(r"^'(?P<value>.*)'$", value)
+                            if char and len(char.group('value')) <= 2:
+                                value = char.group('value')
+                            else:
+                                print(f"\nError: Incorrect Char value: '{value}'")
+                                self.Output_Run.insert(END, f"\nError: Incorrect Char value: '{value}'")
+                                self.BadDec = True
+ 
+                        if tokens[0] == 'float' or tokens[0] == 'double':
+                            try:
+                                value = float(value)
+                            except ValueError:
+                                print(f"\nError: Incorrect float value: '{value}'")
+                                self.Output_Run.insert(END, f"\nError: Incorrect float value: '{value}'")
+                                self.BadDec = True
+                       
+                        if tokens[0] == 'int':
+                            try:
+                                value = int(value)
+                            except ValueError:
+                                print(f"\nError: Incorrect int value: '{value}'")
+                                self.Output_Run.insert(END, f"\nError: Incorrect int value: '{value}'")
+                                self.BadDec = True
                         else:
-                            print("Invalid for loop syntax")
-                    elif tokens[0] == "while":
-                        if len(tokens) == 4:
-                            condition = " ".join(tokens[2:4])
-                            print(f"While loop: Condition: {condition}")
-                        else:
-                            print("Invalid while loop syntax")
-                    elif tokens[0] == "if":
-                        if len(tokens) >= 3 and tokens[-1] == "{":
-                            condition = " ".join(tokens[1:-2])
-                            print(f"If statement: Condition: {condition}")
-                        else:
-                            print("Invalid if statement syntax")
-                    elif tokens[0] == "do":
-                        if len(tokens) >= 3 and tokens[-2] == "while" and tokens[-1] == "(":
-                            condition = " ".join(tokens[1:-3])
-                            print(f"Do-while loop: Condition: {condition}")
-                        else:
-                            print("Invalid do-while loop syntax")
-                    elif tokens[0] == "return":
-                        if len(tokens) == 2:
-                            print(f"Return statement: Value: {tokens[1]}")
-                        else:
-                            print("Invalid return statement syntax")
-                    elif tokens[0] in ["break", "continue", "end"]:
-                        if len(tokens) == 1:
-                            print(f"{tokens[0]} statement")
-                        else:
-                            print(f"Invalid {tokens[0]} statement syntax")
-                elif len(tokens) >= 3 and tokens[1] in self.operators and tokens[-1] == ";":
-                    var = tokens[0]
-                    operator = tokens[1]
-                    value = " ".join(tokens[2:-1])
-                    symbol = ";"
-                    print(f"Assignment: Variable: {var}, Operator: {operator}, Value: {value}, Symbol: {symbol}")
-                elif len(tokens) == 1 and tokens[0][-1] == ";":
-                    var = tokens[0][:-1]
-                    symbol = ";"
-                    print(f"Declaration: Variable: {var}, Symbol: {symbol}")
+                            if float(value) != int(value):
+                                print(f"\nError: Incorrect int value: '{value}'")
+                                self.Output_Run.insert(END, f"\nError: Incorrect int value: '{value}'")
+                                self.BadDec = True
+                      
+                        self.DecPos+=1
+                        #Handle ; here
+                except:
+                    # self.Output_Run.insert(END, f"\n Error: Declaration {var}")
+                    pass
+                        
+                if var in self.Declared_Vars:
+                    print(f"Error: Duplicate declaration of variable {var}. Value: {value}")
+                    self.Output_Run.insert(END, f"\nError: Duplicate declaration of variable '{var}' Value: '{value}'")
                 else:
-                    print("Invalid syntax")
-    
+                    if not self.BadDec:
+                        print(f"Data Type: {tokens[0]}, Variable: {var}, Operator: '{operator}', Value: {value}, Symbol: {symbol}")
+                        self.Output_Run.insert(END, f"\nData Type: {tokens[0]}, Variable: {var}, Operator: '{operator}', Value: {value}, Symbol: {symbol}")
+                        self.Declared_Vars[var] = {"datatype": tokens[0], "value": value, "pos": self.DecPos}
+                    else:
+                        print(f"Declaration Errors Found")
+                        self.Output_Run.insert(END, f"\nDeclaration Errors Found")
+              
+              
+        print("Memory: ",self.Declared_Vars)
+        self.Get_ResWords()
+
+                
+    def Get_ResWords(self):
+        input_lines = self.Input.split(";")
+        for line in input_lines:
+            if line:
+                tokens = line.split()
+                if tokens[0] in self.res_words:
+                    if tokens[0] in ["break", "continue", "end"]:
+                        print(f"Reserved Word: {tokens[0]}")
+                        self.Output_Run.insert(END, f"\n Reserved Word: {tokens[0]}")
+                    else:
+                        argument = " ".join(tokens[1:])
+                        print(f"Reserved Word: {tokens[0]}, Argument: {argument}")
+                        self.Output_Run.insert(END, f"\n Reserved Word: {tokens[0]}, Argument: {argument}")
+   
+
     def Compile(self):
        pass
         
    
     def Clear_Data(self):
         self.Output_Run.delete('1.0', END)
+        # self.Output_Run.insert(END, f"\n ")
         self.Qct = 0
+        self.BadDec = False
         
 
     def ResetWindow(self):
         root.destroy()
-        os.system('main.py')
+        # os.startfile('Basic Compiler\main.py')
 
 
 root = Tk()
