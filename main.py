@@ -77,7 +77,7 @@ class Basic_Compiler:
                         #                 print(f"Data Type: {tokens[0]}, operator: {tokens[2]}, var1: '{tokens[3]}', var2: {tokens[4]}")
                         #                 self.Output_Run.insert(END, f"Data Type: {tokens[0]}, operator: {tokens[2]}, var1: '{tokens[3]}', var2: {tokens[4]}")
                         # except:
-                        #     self.Output_Run.insert(END, f"neeeko")
+                        #     self.Output_Run.insert(END, f"TEMP")
                         #     pass
                         
                         var = tokens[1]
